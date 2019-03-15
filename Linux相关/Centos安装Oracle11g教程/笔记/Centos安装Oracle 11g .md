@@ -380,8 +380,7 @@ endif
 groupadd oinstall 
 groupadd dba 
 useradd -g oinstall -G dba oracle 
-passwd oracle Weaver-123
-
+passwd oracle 
 ```
 
 上面的命令中，最后一个命令的第三个参数指定了密码的值，根据自己的要求填写即可。
