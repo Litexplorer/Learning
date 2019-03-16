@@ -20,7 +20,7 @@ title:Centos安装Oracle 11g
 
 #### 1.1.# 关于vncserver的安装
 
-详细参考：[CentOS7.2安装VNC，让Windows远程连接CentOS 7.2 图形化界面](https://blog.51cto.com/12217917/2060252)
+详细参考：[centos 7 安装和配置vncserver](https://www.cnblogs.com/littlemonsters/p/5779331.html)
 
 ```shell
 # systemctl enable vncserver@:1.service #设置开机启动
@@ -33,6 +33,10 @@ tcp        0      0 0.0.0.0:5901            0.0.0.0:*               LISTEN
 ```
 
 
+
+卸载图形化界面的方式：
+
+[How to remove GNOME from CentOS 7](https://www.techrepublic.com/article/how-to-remove-gnome-from-centos-7/)
 
 
 
@@ -500,25 +504,61 @@ su - 用户
 
 注意事项：
 
-1. 本次安装Oracle时，第二步的选项按照了视频中的设置：
-   ![img](assets/clip_image002.jpg)
-   而且，在下一步中选择了“服务器类型”的选项。
-   - 这样选择主要是为了在安装Oracle的同时安装数据库。
+1. ~~本次安装Oracle时，第二步的选项按照了视频中的设置：~~
+   ~~![img](assets/clip_image002.jpg)~~
+   ~~而且，在下一步中选择了“服务器类型”的选项。~~
+
+   - ~~这样选择主要是为了在安装Oracle的同时安装数据库。~~
+
+
+   在安装Oracle软件的同时安装数据库，当服务器内存太小的时候，往往会卡在界面上很久；比较稳妥的办法是：先安装完Oracle软件，然后再利用图形化界面安装数据库。
+   在生成数据库的时候，服务器的读写会非常高（主要需要关注“写速度”）：
+   ![1552715564431](assets/1552715564431.png)
 1. 进入安装界面后，可能会出现几种错误，其中错误<font color="red">ins_ctx.mk的错误提示</font>，这个错误可以直接跳过；
    如果出现<font color="red">error in invoking target ‘agent nmhs’ of makefile</font>，请参考第七章；
 1. 在安装的过程中，远程服务器可能出现卡死的情况，此时可以登陆服务器后台观察CPU是否在运行来判断进程是否正常。
 
 
 
-
-
-检验是否安装成功：
-
-是否能进入进入sqlplus
+最后使用root用户执行以下脚本：
 
 ```shell
-sqlplus / as dba
+su -
+/home/oracle/app/oracleData/oralnventory/orainstRoot.sh
+/home/oracle/app/oracleData/oracle/product/11.2.0/db_1/root.sh
+
 ```
+
+
+
+
+
+### 5.# 是否成功的检验
+
+1. 是否正确安装Oracle软件：
+   在用户oracle下观察是否能正常启动监听器和是否能进入sqlplus：
+
+   ```shell
+   $ lsnrctl start #监听器启动
+   
+   $ sqlplus / as sysdba #是否能进入sqlplus
+   ```
+
+   如果需要停止监听器，那么可以执行以下命令：
+
+   ```shell
+   $ lsnrctl stop #监听器停止
+   ```
+
+   如果需要退出sqlplus，可以执行以下命令：
+
+   ```shell
+   sql> quit
+   ```
+
+1. 观察是否能
+
+
 
 
 
@@ -543,6 +583,119 @@ $vi $ORACLE_HOME/sysman/lib/ins_emagent.mk
 在“未编辑状态”中按下`/`，用于寻找关键字：“$(MK_EMAGENT_NMECTL)”
 
 将上面的“`$(MK_EMAGENT_NMECTL)`” 改为：“​`$(MK_EMAGENT_NMECTL) -lnnz11`”
+
+
+
+### 7.2 sqlplus能正常启动，但是提示无法找到文件“initorcl.ora”
+
+由于阿里云服务器内存太小，因此，使用图形化界面安装Oracle 11g的时候可能因为内存不够而临时中断。此时，需要重新使用vncserver连接远程图形化界面，并查看是否已经创建完成数据库：
+
+```shell
+# su - oracle #切换到oracle用户，并且切换的同时加载环境变量
+$ vncserver :1
+```
+
+然后，启动本地的vnc viewer登录，查看远程桌面。
+
+在远程桌面中打开命令行界面，并输入：
+
+```shell
+$ dbca
+```
+
+此时，会启动一个Oracle的数据库管理界面，在此界面中即可查看是否已经安装了数据库。
+
+
+
+由于安装过程中断，因此，可能某些启动文件会缺失。如果在启动sqlplus后，输入：
+
+```shell
+sqlplus> startup
+```
+
+发现提示缺失“initorcl.ora”文件（假设数据库的实例名是$A$，那么会提示init$A$.ora文件缺失），此时，需要生成并编辑“initorcl.ora”文件，该文件的模板在$ORACLE\_HOME/product/11.2.0/dbhome\_1/dbs$文件夹下的init.ora。
+
+在该文件夹下新建一个“initorcl.ora”文件，内容如下：
+
+```
+db_name='ORCL'
+memory_target=1G
+processes = 150
+audit_file_dest='/home/oracle/app/oracleData/oracle/admin/orcl/adump'
+audit_trail ='db'
+db_block_size=8192
+db_domain=''
+db_recovery_file_dest='/home/oracle/app/oracleData/oracle/flash_recovery_area'
+db_recovery_file_dest_size=2G
+diagnostic_dest='/home/oracle/app/oracleData/oracle'
+dispatchers='(PROTOCOL=TCP) (SERVICE=ORCLXDB)'
+open_cursors=300
+remote_login_passwordfile='EXCLUSIVE'
+undo_tablespace='UNDOTBS1'
+# You may want to ensure that control files are created on separate physical
+# devices
+control_files = (ora_control1, ora_control2)
+compatible ='11.2.0'
+```
+
+上面第④、⑧、⑩行中`/home/oracle/app/oracleData/oracle`是环境变量中指定的ORACLE_BASE的值。
+
+如果“initorcl.ora”文件的ORACLE_BASE配置错误，会出现以下错误：
+
+![7.2 ORACLE_BASE配置错误](assets/1552703819167.png)
+
+
+
+### 7.3 启动数据库时出现“MEMORY_TARGET”错误
+
+```
+SQL> startup ; 
+ORA-00845: MEMORY_TARGET not supported on this system
+```
+
+当出现以上错误时，是因为MEMORY_MAX_TARGET 的设置超过了 /dev/shm 的大小。此时，可以将 /dev/shm 的值调整得更大。
+
+
+
+操作如下：
+
+1. 查看 /dev/shm 的值；
+
+   ```shell
+   $ df -h | grep shm  # 查看
+   ```
+
+1. 使用root用户登录，并执行以下命令：
+
+   ```shell
+   # mount -o remount,size=1G /dev/shm
+   ```
+
+   上面的命令使/dev/shm重新挂载，同时大小为1G；
+
+1. 经过上面的操作后，能顾正常启动数据库了，但是服务器重启后，就需要重新挂载。为了确保操作系统重启之后能生效，需要修改/etc/fstab文件：
+
+   ```shell
+   # vi  /etc/fstab 
+   ```
+
+   在文件末尾添加以下的语句：
+
+   ```
+   tmpfs /dev/shm tmpfs  defaults,size=1G      0 0
+   ```
+
+   
+
+
+
+
+
+
+
+
+
+
 
 
 
