@@ -691,6 +691,51 @@ ORA-00845: MEMORY_TARGET not supported on this system
 
 
 
+## 八、其它参考文章
+
+1. 静默安装Oracle 11g教程：
+
+   > https://www.jianshu.com/p/4bf587bdf95f
+
+1. 如果还需要以静默方式创建数据库，可以参考这篇文章的最后：
+
+   > https://www.jianshu.com/p/9a02306af35e
+
+   其中，静默参数设置的例子如下：
+
+   ```
+   dbca 
+   -silent 
+   -createDatabase 
+   -templateName General_Purpose.dbc 
+   -gdbname orcl 
+   -sid orcl 
+   -sysPassword oracle 
+   -systemPassword oracle 
+   -responseFile NO_VALUE 
+   -datafileDestination /app/oracle/oradata/ 
+   -redoLogFileSize 50 
+   -recoveryAreaDestination /app/oracle/flash_recovery_area 
+   -storageType FS 
+   -characterSet AL32UTF8 
+   -nationalCharacterSet AL16UTF16 
+   -sampleSchema false 
+   -memoryPercentage 30 
+   -totalMemory 4096 
+   -databaseType OLTP 
+   -emConfiguration NONE
+   ```
+
+1. Oracle 9i的安装参考下面的链接：
+
+   > https://www.jianshu.com/p/b2ebca98d80f
+
+
+
+Oracle的rpm包的下载地址如下：
+
+> https://oss.oracle.com/projects/compat-oracle/files/RedHat/
+
 
 
 
