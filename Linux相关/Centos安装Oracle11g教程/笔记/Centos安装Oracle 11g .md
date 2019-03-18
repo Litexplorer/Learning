@@ -22,6 +22,10 @@ title:Centos安装Oracle 11g
 
 详细参考：[centos 7 安装和配置vncserver](https://www.cnblogs.com/littlemonsters/p/5779331.html)
 
+>如果出现问题，可以参考：
+>
+>[vnc安装成功之后，机器异常关闭或重启之后vnc启动异常出现 is taken because of /tmp/.X11-unix/X1](https://blog.csdn.net/wangziqi1991/article/details/53924872)
+
 ```shell
 # systemctl enable vncserver@:1.service #设置开机启动
 # systemctl start vncserver@:1.service #启动vnc会话服务
@@ -496,24 +500,21 @@ su - 用户
 
 此后，会出现Oracle安装的图形化界面，按照自己的需求勾选响应的选项即可。
 
->在选择`/home/oracle/app/oracleData/oralnventory`这个目录时，可能会出现“该文件夹没有写权限”之类的错误，这是Oracle 11g安装包的一个bug。
+> 1. 由于阿里学生服务器的配置太低，因此推荐使用文章最后的“静默安装”。
 >
->解决办法：只需要在本界面中重新选择到该目录即可。
-
-
+> 1. 如果需要使用图形化界面安装，那么最好在数据库界面的选项中，勾选以下的选项：
+>    ![img](assets/clip_image002-1552899912422.jpg)
+>
+>    并在“安装类型”中选择“个人版”（企业版的product安装需要几个小时）
+>
+> 1. 
+>
+> 
 
 注意事项：
 
-1. ~~本次安装Oracle时，第二步的选项按照了视频中的设置：~~
-   ~~![img](assets/clip_image002.jpg)~~
-   ~~而且，在下一步中选择了“服务器类型”的选项。~~
-
-   - ~~这样选择主要是为了在安装Oracle的同时安装数据库。~~
-
-
-   在安装Oracle软件的同时安装数据库，当服务器内存太小的时候，往往会卡在界面上很久；比较稳妥的办法是：先安装完Oracle软件，然后再利用图形化界面安装数据库。
-   在生成数据库的时候，服务器的读写会非常高（主要需要关注“写速度”）：
-   ![1552715564431](assets/1552715564431.png)
+1. 在选择`/home/oracle/app/oracleData/oralnventory`这个目录时，可能会出现“该文件夹没有写权限”之类的错误，这是Oracle 11g安装包的一个bug;
+   - 解决办法：只需要在本界面中重新选择到该目录即可。
 1. 进入安装界面后，可能会出现几种错误，其中错误<font color="red">ins_ctx.mk的错误提示</font>，这个错误可以直接跳过；
    如果出现<font color="red">error in invoking target ‘agent nmhs’ of makefile</font>，请参考第七章；
 1. 在安装的过程中，远程服务器可能出现卡死的情况，此时可以登陆服务器后台观察CPU是否在运行来判断进程是否正常。
@@ -531,40 +532,199 @@ su -
 
 
 
+### 5.3 安装数据库实例
+
+由于在服务器低配置的情况下，使用图形化界面安装数据库实例会出现“卡死”现象，最好使用静默方式安装数据库实例。安装方式如下：
 
 
-### 5.# 是否成功的检验
 
-1. 是否正确安装Oracle软件：
-   在用户oracle下观察是否能正常启动监听器和是否能进入sqlplus：
+
+
+#### 5.3.1 手动启动数据库
+
+1. 启动监听器：
 
    ```shell
-   $ lsnrctl start #监听器启动
+   $ lsnrctl start
+   ```
+
+1. 启动sqlplus：
+
+   ```shell
+   $ sqlplus / as sysdba
+   ```
+
+   此时界面出现信息：
+
+   ```
+   Copyright (c) 1991, 2009, Oracle.  All rights reserved.
    
-   $ sqlplus / as sysdba #是否能进入sqlplus
+   TNS-01106: Listener using listener name LISTENER has already been started
+   [oracle@iz2ze43q53vjr32pmrzn4kz dbca]$ sqlplus / as sysdba
+   
+   SQL*Plus: Release 11.2.0.1.0 Production on Mon Mar 18 16:54:33 2019
+   
+   Copyright (c) 1982, 2009, Oracle.  All rights reserved.
+   
+   Connected to:
+   Oracle Database 11g Enterprise Edition Release 11.2.0.1.0 - 64bit Production
+   With the Partitioning, OLAP, Data Mining and Real Application Testing options
+   
    ```
 
-   如果需要停止监听器，那么可以执行以下命令：
+   并且命令修改为sqlplus:
 
-   ```shell
-   $ lsnrctl stop #监听器停止
+   ```
+   SQL>
    ```
 
-   如果需要退出sqlplus，可以执行以下命令：
-
-   ```shell
-   sql> quit
-   ```
-
-1. 观察是否能
+   此时，表示已经能够启动监听，并能够正常启动数据库了。
 
 
 
+#### 5.3.2 创建数据库实例
+
+在编辑之前，需要先退出sqlplus进程：
+
+```shell
+SQL> quit
+```
+
+
+
+编辑以下信息：
+
+```
+dbca 
+-silent 
+-createDatabase 
+-templateName General_Purpose.dbc 
+-gdbname ypsy  ①
+-sid orcl ②
+-sysPassword root ③
+-systemPassword root ④
+-responseFile NO_VALUE 
+-datafileDestination /home/oracle/app/oracleData/oracle/oracledata/orcl ⑤
+-redoLogFileSize 50 
+-storageType FS 
+-characterSet AL32UTF8 
+-nationalCharacterSet AL16UTF16 
+-sampleSchema false 
+-memoryPercentage 30 
+-totalMemory 512 ⑥
+-databaseType OLTP 
+-emConfiguration NONE
+```
+
+- ①：一般最好和sid保持一致
+- ②：数据库的实例名称；
+- ③：密码
+- ④：系统用户密码
+- ⑤：安装的数据文件的路径，值一般设置为：一般设置$path = ORACLE\_BASE / orcl / oracledata / SID$。
+- ⑥：内存大小，最好根据服务器的内存大小进行设置。
+
+使用oracle用户执行上面的命令（在执行命令前需要将“①”之类的数字删掉，还需要将换行符删掉）
+
+```shell
+$ dbca -silent -createDatabase -templateName General_Purpose.dbc -gdbname orcl -sid orcl -sysPassword root -systemPassword root -responseFile NO_VALUE -datafileDestination /home/oracle/app/oracleData/oracle/oracledata/orcl -redoLogFileSize 50 -recoveryAreaDestination /home/oracle/app/oracleData/oracle/flash_recovery_area -storageType FS -characterSet AL32UTF8 -nationalCharacterSet AL16UTF16 -sampleSchema false -memoryPercentage 30 -totalMemory 512 -databaseType OLTP -emConfiguration NONE
+```
+
+
+
+出现以下界面表示正在创建数据库：
+
+```
+Copying database files
+1% complete
+3% complete
+11% complete
+18% complete
+26% complete
+37% complete
+Creating and starting Oracle instance
+40% complete
+45% complete
+50% complete
+55% complete
+56% complete
+60% complete
+62% complete
+Completing Database Creation
+66% complete
+70% complete
+73% complete
+85% complete
+96% complete
+100% complete
+Look at the log file "/home/oracle/app/oracleData/oracle/cfgtoollogs/dbca/orcl/orcl.log" for further details.
+```
+
+- 如果只出现最后一句话，那么说明需要查看`/home/oracle/app/oracleData/oracle/cfgtoollogs/dbca/orcl/orcl.log`的信息，根据信息查找对应的解决办法。
+
+  > tips:如果出现“cannot create directory"/home/oracle/oradata/oracle ”，那么可能是因为⑤中的路径值设置为<font color="red">当前用户没有权限访问的路径</font>。
+
+
+
+### 5.4 启动数据库实例
+
+先按照[5.3.1 手动启动数据库](#5.3.1 手动启动数据库)步骤启动数据库，接着再启动数据库实例：
+
+```shell
+SQL> startup
+```
+
+上面的命令，默认以mount方式启动当前$ORACLE\_SID$所指定的数据库实例名。
+
+- 通过命令：
+
+  ```shell
+  $ echo $ORACLE_SID
+  ```
+
+  可以查看当前数据库默认的实例名称。
+
+当出现以下界面，说明数据库实例成功启动：
+
+```
+
+Total System Global Area  534462464 bytes
+Fixed Size                  2215064 bytes
+Variable Size             327156584 bytes
+Database Buffers          201326592 bytes
+Redo Buffers                3764224 bytes
+Database mounted.
+Database opened.
+
+```
+
+
+
+### 5.5 数据库的关闭
+
+Oracle数据库的关闭，需要关闭数据库实例，同时最好还关闭监听程序（两者之间的先后顺序不知道有没有要求）。
+
+```shell
+SQL> shutdown immediate ①
+SQL> quit
+
+$ lsnrctl stop
+```
+
+- ①：参数`immediate`可以立即关闭数据库实例；
+
+
+
+### 5.6 单实例数据库启动多个数据库实例
+
+如果在安装Oracle的过程中选择了“单实例数据库”，而此时项目需要同时启动两个数据库实例，那么就需要==分别==启动这两个数据库的实例。
 
 
 
 
-## 六、编写Oracle开机脚本
+
+
+
+## 六、编写Oracle启动脚本
 
 
 
@@ -710,21 +870,23 @@ ORA-00845: MEMORY_TARGET not supported on this system
    -templateName General_Purpose.dbc 
    -gdbname orcl 
    -sid orcl 
-   -sysPassword oracle 
-   -systemPassword oracle 
+   -sysPassword root 
+   -systemPassword root 
    -responseFile NO_VALUE 
-   -datafileDestination /app/oracle/oradata/ 
+   -datafileDestination /home/oracle/app/oracleData/oracle/oracledata/orcl 
    -redoLogFileSize 50 
-   -recoveryAreaDestination /app/oracle/flash_recovery_area 
    -storageType FS 
    -characterSet AL32UTF8 
    -nationalCharacterSet AL16UTF16 
    -sampleSchema false 
    -memoryPercentage 30 
-   -totalMemory 4096 
+   -totalMemory 512 
    -databaseType OLTP 
    -emConfiguration NONE
    ```
+
+   关于`-datafileDestination`的问题：
+   一般设置$path = ORACLE\_BASE / orcl / oracledata / SID​$。
 
 1. Oracle 9i的安装参考下面的链接：
 
