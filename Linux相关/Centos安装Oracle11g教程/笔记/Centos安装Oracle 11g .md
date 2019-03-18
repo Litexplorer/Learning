@@ -617,11 +617,20 @@ dbca
 ```
 
 - ①：一般最好和sid保持一致
+
 - ②：数据库的实例名称；
+
 - ③：密码
+
 - ④：系统用户密码
+
 - ⑤：安装的数据文件的路径，值一般设置为：一般设置$path = ORACLE\_BASE / orcl / oracledata / SID$。
+
 - ⑥：内存大小，最好根据服务器的内存大小进行设置。
+
+- 参数详细说明，可以参考：
+
+  > https://www.jianshu.com/p/9a02306af35e
 
 使用oracle用户执行上面的命令（在执行命令前需要将“①”之类的数字删掉，还需要将换行符删掉）
 
@@ -662,6 +671,8 @@ Look at the log file "/home/oracle/app/oracleData/oracle/cfgtoollogs/dbca/orcl/o
 - 如果只出现最后一句话，那么说明需要查看`/home/oracle/app/oracleData/oracle/cfgtoollogs/dbca/orcl/orcl.log`的信息，根据信息查找对应的解决办法。
 
   > tips:如果出现“cannot create directory"/home/oracle/oradata/oracle ”，那么可能是因为⑤中的路径值设置为<font color="red">当前用户没有权限访问的路径</font>。
+
+
 
 
 
